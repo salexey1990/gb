@@ -1,3 +1,5 @@
+import numpy as np
+
 def precision(recommended_list, bought_list):
     bought_list = np.array(bought_list)
     recommended_list = np.array(recommended_list)
