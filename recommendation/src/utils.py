@@ -7,14 +7,15 @@ def prefilter_items(data, take_n_popular=5000, item_features=None):
     popularity = data.groupby('item_id')['user_id'].nunique().reset_index() / data['user_id'].nunique()
     popularity.rename(columns={'user_id': 'share_unique_users'}, inplace=True)
 
-    top_popular = popularity[popularity['share_unique_users'] > 0.2].item_id.tolist()
-    data = data[~data['item_id'].isin(top_popular)]
+    # top_popular = popularity[popularity['share_unique_users'] > 0.2].item_id.tolist()
+    # data = data[~data['item_id'].isin(top_popular)]
 
     # Уберем самые НЕ популярные товары (их и так НЕ купят)
     top_notpopular = popularity[popularity['share_unique_users'] < 0.02].item_id.tolist()
     data = data[~data['item_id'].isin(top_notpopular)]
 
     # Уберем товары, которые не продавались за последние 12 месяцев
+    data = data[data['week_no'] >= data['week_no'].max() - 52]
 
     # Уберем не интересные для рекоммендаций категории (department)
     if item_features is not None:
@@ -31,10 +32,10 @@ def prefilter_items(data, take_n_popular=5000, item_features=None):
 
     # Уберем слишком дешевые товары (на них не заработаем). 1 покупка из рассылок стоит 60 руб.
     data['price'] = data['sales_value'] / (np.maximum(data['quantity'], 1))
-    data = data[data['price'] > 2]
+    data = data[data['price'] > 1]
 
     # Уберем слишком дорогие товарыs
-    data = data[data['price'] < 50]
+    data = data[data['price'] < 20]
 
     # Возбмем топ по популярности
     popularity = data.groupby('item_id')['quantity'].sum().reset_index()
@@ -50,5 +51,36 @@ def prefilter_items(data, take_n_popular=5000, item_features=None):
     return data
 
 
-def postfilter_items(user_id, recommednations):
-    pass
+def postfilter_items(recommednations, own, data):
+    res = []
+    categories = []
+
+    for own_item in own:
+        if data[data['item_id'] == own_item].head(1).price.values[0] > 7:
+            categories.append(data[data['item_id'] == own_item].head(1).sub_commodity_desc.values[0])
+            res.append(own_item)
+            break
+
+    for own_item in own:
+        if data[data['item_id'] == own_item].head(1).sub_commodity_desc.values[0] not in categories:
+            categories.append(data[data['item_id'] == own_item].head(1).sub_commodity_desc.values[0])
+            res.append(own_item)
+            if len(res) == 3:
+                break
+
+    for als_item in recommednations:
+        if data[data['item_id'] == als_item].head(1).sub_commodity_desc.values[0] not in categories:
+            categories.append(data[data['item_id'] == als_item].head(1).sub_commodity_desc.values[0])
+            res.append(als_item)
+            if len(res) == 5:
+                break
+
+    return res
+
+
+
+def get_prices(items, data):
+    res = []
+    for item in items:
+        res.append(data[data['item_id'] == item].price.mean())
+    return res

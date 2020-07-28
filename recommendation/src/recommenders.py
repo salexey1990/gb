@@ -97,13 +97,13 @@ class MainRecommender:
     def _update_dict(self, user_id):
         """Если появился новыю user / item, то нужно обновить словари"""
 
-        if user_id not in self.userid_to_id.keys():
-
-            max_id = max(list(self.userid_to_id.values()))
-            max_id += 1
-
-            self.userid_to_id.update({user_id: max_id})
-            self.id_to_userid.update({max_id: user_id})
+        # if user_id not in self.userid_to_id.keys():
+        #
+        #     max_id = max(list(self.userid_to_id.values()))
+        #     max_id += 1
+        #
+        #     self.userid_to_id.update({user_id: max_id})
+        #     self.id_to_userid.update({max_id: user_id})
 
     def _get_similar_item(self, item_id):
         """Находит товар, похожий на item_id"""
@@ -123,8 +123,12 @@ class MainRecommender:
     def _get_recommendations(self, user, model, N=5):
         """Рекомендации через стардартные библиотеки implicit"""
 
-        self._update_dict(user_id=user)
-        res = [self.id_to_itemid[rec[0]] for rec in model.recommend(userid=self.userid_to_id[user],
+        # self._update_dict(user_id=user)
+
+        if user not in self.userid_to_id.keys():
+            res = self.overall_top_purchases[:N]
+        else:
+            res = [self.id_to_itemid[rec[0]] for rec in model.recommend(userid=self.userid_to_id[user],
                                         user_items=csr_matrix(self.user_item_matrix).tocsr(),
                                         N=N,
                                         filter_already_liked_items=False,
@@ -139,13 +143,13 @@ class MainRecommender:
     def get_als_recommendations(self, user, N=5):
         """Рекомендации через стардартные библиотеки implicit"""
 
-        self._update_dict(user_id=user)
+        # self._update_dict(user_id=user)
         return self._get_recommendations(user, model=self.model, N=N)
 
     def get_own_recommendations(self, user, N=5):
         """Рекомендуем товары среди тех, которые юзер уже купил"""
 
-        self._update_dict(user_id=user)
+        # self._update_dict(user_id=user)
         return self._get_recommendations(user, model=self.own_recommender, N=N)
 
     def get_similar_items_recommendation(self, user, N=5):
