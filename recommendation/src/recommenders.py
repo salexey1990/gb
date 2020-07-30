@@ -36,7 +36,7 @@ class MainRecommender:
             self.itemid_to_id, self.userid_to_id = self._prepare_dicts(self.user_item_matrix)
 
         if weighting:
-            self.user_item_matrix = bm25_weight(self.user_item_matrix.T).T
+            self.user_item_matrix = bm25_weight(self.user_item_matrix.T, K1=1.2, B=.75).T
 
         self.model = self.fit(self.user_item_matrix)
         self.own_recommender = self.fit_own_recommender(self.user_item_matrix)
@@ -46,7 +46,7 @@ class MainRecommender:
         """Готовит user-item матрицу"""
         user_item_matrix = pd.pivot_table(data,
                                           index='user_id', columns='item_id',
-                                          values='quantity',  # Можно пробовать другие варианты
+                                          values='sales_value',  # Можно пробовать другие варианты
                                           aggfunc='count',
                                           fill_value=0
                                           )
@@ -83,7 +83,7 @@ class MainRecommender:
         return own_recommender
 
     @staticmethod
-    def fit(user_item_matrix, n_factors=20, regularization=0.001, iterations=15, num_threads=4):
+    def fit(user_item_matrix, n_factors=100, regularization=0.01, iterations=5, num_threads=4):
         """Обучает ALS"""
 
         model = AlternatingLeastSquares(factors=n_factors,
